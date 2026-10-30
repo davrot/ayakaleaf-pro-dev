@@ -94,6 +94,10 @@ const AdminController = {
       openSockets,
       systemMessages,
       privilegesMatrix,
+      // LLM module flag for the "LLM Configuration" tab (Manage Site).
+      llmEnabled:
+        process.env.LLM_ENABLED === 'true' ||
+        !!(Settings.llm && Settings.llm.enabled),
     }
 
     if (Features.hasFeature('saas')) {
