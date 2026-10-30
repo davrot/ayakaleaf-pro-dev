@@ -324,7 +324,7 @@ async function saveAdminSettings(req, res) {
 
   await writeAdminSettings(updatedSettings)
   logger.info({
-    length: systemPrompt.length,
+    length: (updatedSettings.systemPrompt || '').length,
     llmApiUrl: !!updatedSettings.llmApiUrl,
     llmApiType: !!updatedSettings.llmApiType,
     hasLlmApiKey: !!updatedSettings.llmApiKey,

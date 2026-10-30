@@ -27,7 +27,42 @@ import { generateText, generateObject, APICallError, NoContentGeneratedError, No
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import { z } from 'zod';
 import { recordUsage } from './LLMUsage.mjs'; // overleaf-lab (usage meter)
+
+/*
+ * overleaf-lab (ayakaleaf port): AI SDK v6's generateObject requires a Standard
+ * Schema (zod/valibot); the v4/v5-era callers here pass plain JSON Schema
+ * objects (REVIEW_ITEMS_SCHEMA, REVIEW_SUMMARY_SCHEMA, ...). Convert the
+ * supported subset instead of rewriting every call site.
+ */
+function jsonSchemaToZod(s) {
+  if (!s || typeof s !== 'object') return z.unknown();
+  if (Array.isArray(s.enum)) {
+    const values = s.enum.filter(v => typeof v === 'string');
+    return values.length === s.enum.length ? z.enum(values) : z.enum(s.enum.map(String));
+  }
+  if (s.type === 'string') return z.string();
+  if (s.type === 'number' || s.type === 'integer') return z.number();
+  if (s.type === 'boolean') return z.boolean();
+  if (s.type === 'array' && s.items) return z.array(jsonSchemaToZod(s.items));
+  if (s.type === 'object' || s.properties) {
+    const shape = {};
+    for (const [k, v] of Object.entries(s.properties || {})) shape[k] = jsonSchemaToZod(v);
+    const required = new Set(s.required || []);
+    for (const [k, v] of Object.entries(shape)) {
+      if (!required.has(k)) shape[k] = v.optional();
+    }
+    return z.looseObject(shape);
+  }
+  return z.unknown();
+}
+
+function toStandardSchema(schema) {
+  if (schema && (typeof schema === 'function' || 'safeParse' in schema)) return schema;
+  return jsonSchemaToZod(schema);
+}
+
 
 export const PROVIDER_TYPES = ['openai', 'anthropic', 'openaiCompatible'];
 
@@ -306,7 +341,7 @@ export async function chatObject(spec, messages, schema, options = {}) {
   try {
     const result = await generateObject({
       model: createModel(spec),
-      schema,
+      schema: toStandardSchema(schema),
       system,
       messages: coreMessages,
       ...commonCallOptions(options, { defaultMaxRetries: 0 })

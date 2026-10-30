@@ -241,6 +241,23 @@ export const UserSchema = new Schema(
     splitTests: Schema.Types.Mixed,
     analyticsId: { type: String, required: true },
     completedTutorials: Schema.Types.Mixed,
+
+    // LLM BYO (modules/llm): per-user LLM provider rows, legacy single-provider
+    // fields, compliance rubrics and shared model selection. Stored as Mixed so
+    // the module controls the exact row shape (mongoose strict mode would drop
+    // undefined paths, and arrays of objects need _id: false semantics).
+    useOwnLLMSettings: { type: Boolean, default: false },
+    llmApiKey: { type: String },
+    llmApiUrl: { type: String },
+    llmApiType: { type: String },
+    llmModelName: { type: String },
+    llmModels: Schema.Types.Mixed,
+    llmModelNames: Schema.Types.Mixed,
+    llmCompletionModel: { type: String },
+    llmCompletionModels: Schema.Types.Mixed,
+    llmProviders: Schema.Types.Mixed,
+    llmComplianceRubrics: Schema.Types.Mixed,
+    llmSelectedModel: { type: String },
     suspended: { type: Boolean },
     dsMobileApp: {
       subscribed: { type: Boolean },
